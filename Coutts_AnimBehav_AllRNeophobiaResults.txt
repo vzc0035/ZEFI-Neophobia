@@ -1,0 +1,59 @@
+###################################################################
+# Title: Coutts et al., Animal Behaviour, "Developmental food restriction has transient effects on neophobia and fear behaviour in zebra finches" - R1 and R2 combined
+#
+# Cox Proportional Hazard Models & Kaplan-Meir Survival Curves
+# using coxme and survminer packages
+# Last updated: December 24, 2025
+##################################################################
+
+####load necessary packages
+library(survival)
+library(survminer)
+library(coxme)
+library(nlme)
+
+####upload data
+allrneophobia=read.csv(file.choose()) #Coutts_AnimBehav_AllRNeophobia_NoControls.csv
+allrstartle=read.csv(file.choose()) #Coutts_AnimBehav_AllStartleTest_NoControl.csv
+
+####make appropriate data types (must be numeric for survival models)
+##Note: allrneophobia = food and objects; allrstartle = startle test
+allrneophobia$Sex<-factor(allrneophobia$Sex)                             #sex of birds
+allrstartle$Sex<-factor(allrstartle$Sex)                                 #sex of birds
+allrstartle$BirdID<-factor(allrstartle$BirdID)                           #subject ID
+allrneophobia$BirdID<-factor(allrneophobia$BirdID)                       #subject ID
+allrneophobia$TrialOrder<-as.integer(allrneophobia$TrialOrder)           #order trials were performed
+allrstartle$TrialOrder<-as.integer(allrstartle$TrialOrder)               #order trials were performed
+allrneophobia$Trial<-factor(allrneophobia$Trial)                         #object (0=control,1=blueberries,2=broccoli,3=pen,4=hairtie)
+allrstartle$Startle_nostartle<-as.numeric(allrstartle$Startle_nostartle) #was this a startle test (=1) or control trial (=0)
+allrneophobia$Treatment<-factor(allrneophobia$Treatment)                 #food-restricted (=1) or control (=0)
+allrstartle$Treatment<-factor(allrstartle$Treatment)                     #food-restricted (=1) or control (=0)
+allrneophobia$TimeBowl<-as.numeric(allrneophobia$TimeBowl)               #time bird approached bowl
+allrstartle$TimeBowl<-as.numeric(allrstartle$TimeBowl)                   #time bird approached bowl
+allrneophobia$TimeFeed<-as.numeric(allrneophobia$TimeFeed)               #time fed from dish
+allrstartle$TimeFeed<-as.numeric(allrstartle$TimeFeed)                   #time fed from dish
+allrstartle$StatusBowl<-as.numeric(allrobject$StatusBowl)                         #did subject feed (=1) or not (=0)
+allrstartle$StatusFeed<-as.numeric(allrfood$StatusFeed)                             #did subject feed (=1) or not (=0)
+allrneophobia$Status<-as.numeric(allrneophobia$Status)                   #did subject feed (=1) or not (=0)
+
+
+###################################################################
+##EFFECT OF TREATMENT ON THE FEEDING DIFFERENCE BETWEEN R1 AND R2##
+###################################################################
+##neophobia
+allr.neophobia=lme(R2_Minus_R1~Treatment,random=~1|Nest/BirdID,data=allrneophobia,na.action=na.exclude)
+summary(allr.neophobia)
+#Fixed effects:  R2_Minus_R1 ~ Treatment 
+#                Value Std.Error  DF   t-value p-value
+#(Intercept) -60.09937  25.57238 358 -2.350167  0.0193
+#Treatment1   63.01127  37.14864  18  1.696193  0.1071
+
+##startle test
+allr.startle=lme(R2_Minus_R1~Treatment,random=~1|Nest/BirdID,data=allrstartle,na.action=na.exclude)
+summary(allr.startle)
+#Fixed effects:  R2_Minus_R1 ~ Treatment 
+#               Value Std.Error DF   t-value p-value
+#(Intercept) 36.57563  46.17384 30 0.7921289  0.4345
+#Treatment1   3.34421  61.87433 16 0.0540483  0.9576
+
+
