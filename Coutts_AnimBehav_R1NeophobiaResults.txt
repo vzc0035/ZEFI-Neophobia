@@ -1,0 +1,601 @@
+###################################################################
+# Title: Coutts et al., Animal Behaviour, "Developmental food restriction has transient effects on neophobia and fear behaviour in zebra finches" - Round 1 Neophobia (61-66 dph)
+#
+# Cox Proportional Hazard Models & Kaplan-Meir Survival Curves
+# using coxme and survminer packages
+# Last updated: December 24, 2025
+##################################################################
+# for help on plots: https://cran.r-project.org/web/packages/survminer/readme/README.html
+
+####load necessary packages
+library(survival)
+library(survminer)
+library(coxme)
+
+####upload data
+r1neophobia=read.csv(file.choose()) #Coutts_AnimBehav_R1Neophobia.csv
+r1object=read.csv(file.choose()) #Coutts_AnimBehav_R1ObjectNeophobia.csv
+r1food=read.csv(file.choose()) #Coutts_AnimBehav_R1FoodNeophobia.csv
+r1startle=read.csv(file.choose()) #Coutts_AnimBehav_R1StartleTest.csv
+
+####make appropriate data types (must be numeric for survival models)
+##Note: r1food = just food neophobia; r1object = just object neophobia
+##Note: r1neophobia = food and objects; r1startle = startle test
+r1object$Sex<-factor(r1object$Sex)                                   #sex of birds
+r1food$Sex<-factor(r1food$Sex)                                       #sex of birds
+r1neophobia$Sex<-factor(r1neophobia$Sex)                             #sex of birds
+r1startle$Sex<-factor(r1startle$Sex)                                 #sex of birds
+r1object$BirdID<-factor(r1object$BirdID)                             #subject ID
+r1food$BirdID<-factor(r1food$BirdID)                                 #subject ID
+r1startle$BirdID<-factor(r1startle$BirdID)                           #subject ID
+r1neophobia$BirdID<-factor(r1neophobia$BirdID)                       #subject ID
+r1object$TrialOrder<-as.integer(r1object$TrialOrder)                 #order trials were performed
+r1food$TrialOrder<-as.integer(r1food$TrialOrder)                     #order trials were performed
+r1neophobia$TrialOrder<-as.integer(r1neophobia$TrialOrder)           #order trials were performed
+r1startle$TrialOrder<-as.integer(r1startle$TrialOrder)               #order trials were performed
+r1object$Trial<-factor(r1object$Trial)                               #object (0=control,1=blueberries,2=broccoli,3=pen,4=hairtie)
+r1food$Trial<-factor(r1food$Trial)                                   #object (0=control,1=blueberries,2=broccoli,3=pen,4=hairtie)
+r1neophobia$Trial<-factor(r1neophobia$Trial)                         #object (0=control,1=blueberries,2=broccoli,3=pen,4=hairtie)
+r1food$Object_noobject<-as.numeric(r1food$Object_noobject)           #was there a novel food (=1) or not (=0)
+r1object$Object_noobject<-as.numeric(r1object$Object_noobject)       #was there a novel food (=1) or not (=0)
+r1startle$Startle_nostartle<-as.numeric(r1startle$Startle_nostartle) #was this a startle test (=1) or control trial (=0)
+r1object$Treatment<-factor(r1object$Treatment)                       #food-restricted (=1) or control (=0)
+r1food$Treatment<-factor(r1food$Treatment)                           #food-restricted (=1) or control (=0)
+r1neophobia$Treatment<-factor(r1neophobia$Treatment)                 #food-restricted (=1) or control (=0)
+r1startle$Treatment<-factor(r1startle$Treatment)                     #food-restricted (=1) or control (=0)
+r1object$TimeBowl<-as.numeric(r1object$TimeBowl)                     #time bird approached bowl
+r1food$TimeBowl<-as.numeric(r1food$TimeBowl)                         #time bird approached bowl
+r1neophobia$TimeBowl<-as.numeric(r1neophobia$TimeBowl)               #time bird approached bowl
+r1startle$TimeBowl<-as.numeric(r1startle$TimeBowl)                   #time bird approached bowl
+r1object$TimeFeed<-as.numeric(r1object$TimeFeed)                     #time fed from dish
+r1food$TimeFeed<-as.numeric(r1food$TimeFeed)                         #time fed from dish
+r1neophobia$TimeFeed<-as.numeric(r1neophobia$TimeFeed)               #time fed from dish
+r1startle$TimeFeed<-as.numeric(r1startle$TimeFeed)                   #time fed from dish
+r1object$StatusBowl<-as.numeric(r1object$StatusBowl)                         #did subject feed (=1) or not (=0)
+r1food$StatusBowl<-as.numeric(r1food$StatusBowl)                             #did subject feed (=1) or not (=0)
+r1startle$StatusBowl<-as.numeric(r1object$StatusBowl)                         #did subject feed (=1) or not (=0)
+r1startle$StatusFeed<-as.numeric(r1food$StatusFeed)                             #did subject feed (=1) or not (=0)
+r1neophobia$Status<-as.numeric(r1neophobia$Status)                   #did subject feed (=1) or not (=0)
+r1object$StatusFeed<-as.numeric(r1object$StatusFeed)                         #did subject feed (=1) or not (=0)
+r1food$StatusFeed<-as.numeric(r1food$StatusFeed)                             #did subject feed (=1) or not (=0)
+
+
+
+########################
+##CHECKING ASSUMPTIONS##
+########################
+#From: http://www.sthda.com/english/wiki/cox-model-assumptions
+#Check Schoenfeld residuals to check the proportional hazards assumption
+#Do not have continuous covariates, so no need to check Martingale residuals to assess nonlinearity
+#Can also check deviance residuals (symmetric transformation of the Martingale residuals), to examine influential observations
+#These tests can only be used for fixed effects, not random effects
+
+#Make a Cox model with fixed effects only
+res.cox1<-coxph(Surv(TimeBowl,Status)~Trial,data=r1neophobia)
+res.cox1
+#Call:
+#coxph(formula = Surv(TimeBowl, Status) ~ Trial, data = r1neophobia)
+#
+#           coef exp(coef) se(coef)       z        p
+#Trial1 -3.48137   0.03077  0.33219 -10.480  < 2e-16
+#Trial2 -1.31019   0.26977  0.18596  -7.046 1.85e-12
+#Trial3 -2.50561   0.08163  0.23566 -10.632  < 2e-16
+#Trial4 -1.79929   0.16542  0.19822  -9.077  < 2e-16
+#
+#Likelihood ratio test=203.2  on 4 df, p=< 2.2e-16
+#n= 356, number of events= 212 
+ 
+res.cox2<-coxph(Surv(TimeFeed,Status)~Trial,data=r1neophobia)
+res.cox2
+#Call:
+#coxph(formula = Surv(TimeFeed, Status) ~ Trial, data = r1neophobia)
+#
+#           coef exp(coef) se(coef)       z      p
+#Trial1 -3.85811   0.02111  0.33824 -11.407 <2e-16
+#Trial2 -1.75508   0.17289  0.19394  -9.050 <2e-16
+#Trial3 -2.72486   0.06556  0.24006 -11.351 <2e-16
+#Trial4 -2.01568   0.13323  0.20373  -9.894 <2e-16
+#
+#Likelihood ratio test=228.6  on 4 df, p=< 2.2e-16
+#n= 356, number of events= 212 
+
+res.cox3<-coxph(Surv(TimeBowl,Status)~Object_noobject,data=r1neophobia)
+res.cox3
+#Call:
+#coxph(formula = Surv(TimeBowl, Status) ~ Object_noobject, data = r1neophobia)
+#
+#                   coef exp(coef) se(coef)   z      p
+#Object_noobject -2.0664    0.1266   0.1589 -13 <2e-16
+#
+#Likelihood ratio test=134.8  on 1 df, p=< 2.2e-16
+#n= 356, number of events= 212 
+
+res.cox4<-coxph(Surv(TimeFeed,Status)~Object_noobject,data=r1neophobia)
+res.cox4
+#Call:
+#coxph(formula = Surv(TimeFeed, Status) ~ Object_noobject, data = r1neophobia)
+#
+#                    coef exp(coef) se(coef)      z      p
+#Object_noobject -2.36823   0.09365  0.16738 -14.15 <2e-16
+#
+#Likelihood ratio test=161.8  on 1 df, p=< 2.2e-16
+#n= 356, number of events= 212 
+
+#Proportional hazards assumption 
+#using the function cox.zph() in the survival package
+test.ph1<-cox.zph(res.cox1)
+test.ph1
+#       chisq df    p
+#Trial   5.67  4 0.23
+#GLOBAL  5.67  4 0.23
+
+test.ph2<-cox.zph(res.cox2)
+test.ph2
+#       chisq df    p
+#Trial   5.82  4 0.21
+#GLOBAL  5.82  4 0.21
+
+test.ph3<-cox.zph(res.cox3)
+test.ph3
+#                chisq df    p
+#Object_noobject  2.31  1 0.13
+#GLOBAL           2.31  1 0.13
+
+test.ph4<-cox.zph(res.cox4)
+test.ph4
+#                chisq df    p
+#Object_noobject  2.61  1 0.11
+#GLOBAL           2.61  1 0.11
+
+#Checking the scaled Schoenfeld residuals against the transformed time 
+#Using ggcoxzph() in the survminer package
+ggcoxzph(test.ph1)
+ggcoxzph(test.ph2)
+ggcoxzph(test.ph3)
+ggcoxzph(test.ph4)
+
+#Checking for influential observations
+#Using the function ggcoxdiagnostics() in the survminer package: 
+ggcoxdiagnostics(res.cox1,type="deviance", linear.predictions=FALSE, ggtheme=theme_bw())
+ggcoxdiagnostics(res.cox2,type="deviance", linear.predictions=FALSE, ggtheme=theme_bw())
+ggcoxdiagnostics(res.cox3,type="deviance", linear.predictions=FALSE, ggtheme=theme_bw())
+ggcoxdiagnostics(res.cox4,type="deviance", linear.predictions=FALSE, ggtheme=theme_bw())
+
+
+##############################################################
+##ARE OBJECTS AND NOVEL FOOD PROVIDING A NEOPHOBIC RESPONSE?##
+##############################################################
+object.response=coxme(Surv(TimeFeed,StatusFeed)~Object_noobject+(1|Nest/BirdID),data=r1object)
+object.response
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1object
+#  events, n = 147, 212
+#  Iterations= 19 118 
+#                    NULL Integrated    Fitted
+#Log-likelihood -717.8361  -643.1977 -594.2784
+#
+#                   Chisq    df p    AIC    BIC
+#Integrated loglik 149.28  3.00 0 143.28 134.31
+# Penalized loglik 247.12 39.62 0 167.87  49.39
+#
+#Model:  Surv(TimeFeed, Status) ~ Object_noobject + (1 | Nest/BirdID) 
+#Fixed coefficients
+#                     coef  exp(coef)  se(coef)      z p
+#Object_noobject -2.891609 0.05548688 0.2405749 -12.02 0
+#
+#Random effects
+# Group       Variable    Std Dev   Variance 
+# Nest/BirdID (Intercept) 0.6689585 0.4475055
+# Nest        (Intercept) 0.5122277 0.2623772
+###Yes, objects are providing a neophobic response.
+ 
+
+food.response=coxme(Surv(TimeFeed,StatusFeed)~Object_noobject+(1|Nest/BirdID),data=r1food)
+food.response
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1food
+#  events, n = 137, 216
+#  Iterations= 21 129 
+#                   NULL Integrated    Fitted
+#Log-likelihood -679.376  -610.4095 -606.2364
+#
+#                   Chisq   df p    AIC    BIC
+#Integrated loglik 137.93 3.00 0 131.93 123.17
+# Penalized loglik 146.28 4.98 0 136.31 121.75
+#
+#Model:  Surv(TimeFeed, Status) ~ Object_noobject + (1 | Nest/BirdID) 
+#Fixed coefficients
+#                     coef  exp(coef)  se(coef)      z p
+#Object_noobject -2.446658 0.08658244 0.2062462 -11.86 0
+#
+#Random effects
+# Group       Variable    Std Dev     Variance   
+# Nest/BirdID (Intercept) 0.088868756 0.007897656
+# Nest        (Intercept) 0.167980276 0.028217373
+###Yes, novel foods are providing a neophobic response.
+
+
+###########################
+##TESTING FOR HABITUATION##
+###########################
+##Remove control trials from sheet
+all.habit=coxme(Surv(TimeFeed,Status)~TrialOrder+(1|Nest/BirdID),data=r1neophobia)
+all.habit
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1neophobia
+#  events, n = 140, 284
+#  Iterations= 12 52 
+#                    NULL Integrated    Fitted
+#Log-likelihood -748.9949  -743.0048 -714.7103
+#
+#                  Chisq    df          p   AIC    BIC
+#Integrated loglik 11.98  3.00 7.4513e-03  5.98  -2.84
+# Penalized loglik 68.57 24.94 6.0653e-06 18.69 -54.68
+#
+#Model:  Surv(TimeFeed, Status) ~ TrialOrder + (1 | Nest/BirdID) 
+#Fixed coefficients
+#                  coef exp(coef)  se(coef)    z    p
+#TrialOrder -0.01005493 0.9899955 0.0513898 -0.2 0.84
+#
+#Random effects
+# Group       Variable    Std Dev   Variance 
+# Nest/BirdID (Intercept) 0.3731818 0.1392647
+# Nest        (Intercept) 0.4743805 0.2250368
+###No, finches do not significantly habituate to the trials during the juvenile period.
+
+#################################################################
+##EFFECT OF FOOD RESTRICTION ON NEOPHOBIA AND STARTLE BEHAVIOUR##
+#################################################################
+####remove control trials from files before running stats
+##object neophobia, approaching the bowl
+object.bowl=coxme(Surv(TimeBowl,StatusBowl)~Treatment+Trial+Sex+Sex:Treatment+(1|Nest/BirdID),data=r1object)
+object.bowl
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1object
+#  events, n = 100, 140
+#  Iterations= 28 119 
+#                    NULL Integrated    Fitted
+#Log-likelihood -444.8997  -427.1364 -358.9791
+#
+#                   Chisq    df          p   AIC    BIC
+#Integrated loglik  35.53  6.00 3.4068e-06 23.53   7.90
+# Penalized loglik 171.84 51.34 6.5503e-15 69.17 -64.58
+#
+#Model:  Surv(TimeBowl, StatusBowl) ~ Treatment + Trial + Sex + #Sex:Treatment +      (1 | Nest/BirdID) 
+#Fixed coefficients
+#                       coef exp(coef)  se(coef)     z       p
+#Treatment1      -0.38280329  0.681947 0.6233201 -0.61 5.4e-01
+#Trial4           1.13592668  3.114058 0.2396178  4.74 2.1e-06
+#SexM             0.07684912  1.079879 0.5055639  0.15 8.8e-01
+#Treatment1:SexM  0.11439784  1.121198 0.7326636  0.16 8.8e-01
+#
+#Random effects
+# Group       Variable    Std Dev   Variance 
+# Nest/BirdID (Intercept) 1.1729209 1.3757434
+# Nest        (Intercept) 0.7323796 0.5363799
+
+#no interactions #####FINAL MODEL#####
+object.bowl=coxme(Surv(TimeBowl,StatusBowl)~Treatment+Trial+Sex+(1|Nest/BirdID),data=r1object)
+object.bowl
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1object
+#  events, n = 100, 140
+#  Iterations= 21 91 
+#                    NULL Integrated    Fitted
+#Log-likelihood -444.8997  -427.1485 -358.8391
+#
+#                   Chisq    df          p   AIC    BIC
+#Integrated loglik  35.50  5.00 1.1943e-06 25.50  12.48
+# Penalized loglik 172.12 51.12 5.2180e-15 69.87 -63.31
+#
+#Model:  Surv(TimeBowl, StatusBowl) ~ Treatment + Trial + Sex + (1 | #Nest/BirdID) 
+#Fixed coefficients
+#                 coef exp(coef)  se(coef)     z       p
+#Treatment1 -0.3193308 0.7266351 0.4692455 -0.68 5.0e-01
+#Trial4      1.1360032 3.1142964 0.2395083  4.74 2.1e-06
+#SexM        0.1313184 1.1403308 0.3670257  0.36 7.2e-01
+#
+#Random effects
+# Group       Variable    Std Dev   Variance 
+# Nest/BirdID (Intercept) 1.1788840 1.3897676
+# Nest        (Intercept) 0.7242373 0.5245196
+
+##food neophobia, approaching the bowl
+food.bowl=coxme(Surv(TimeBowl,StatusBowl)~Treatment+Trial+Sex+Sex:Treatment+(1|Nest/BirdID),data=r1food)
+food.bowl
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1food
+#  events, n = 119, 144
+#  Iterations= 7 41 
+#                    NULL Integrated    Fitted
+#Log-likelihood -517.0539  -486.2704 -435.3198
+#
+#                   Chisq    df          p   AIC    BIC
+#Integrated loglik  61.57  6.00 2.1612e-11 49.57  32.89
+# Penalized loglik 163.47 42.36 4.4409e-16 78.75 -38.96
+#
+#Model:  Surv(TimeBowl, StatusBowl) ~ Treatment + Trial + Sex + #Sex:Treatment +      (1 | Nest/BirdID) 
+#Fixed coefficients
+#                      coef exp(coef)  se(coef)     z       p
+#Treatment1      -0.5009988 0.6059251 0.4442552 -1.13 2.6e-01
+#Trial2           1.8516937 6.3706003 0.2333531  7.94 2.1e-15
+#SexM            -0.8194935 0.4406548 0.3985259 -2.06 4.0e-02
+#Treatment1:SexM  0.4871221 1.6276254 0.5688752  0.86 3.9e-01
+#
+#Random effects
+# Group       Variable    Std Dev   Variance 
+# Nest/BirdID (Intercept) 0.8387651 0.7035269
+# Nest        (Intercept) 0.4052790 0.1642511
+
+#no interactions #####FINAL MODEL#####
+food.bowl=coxme(Surv(TimeBowl,StatusBowl)~Treatment+Sex+Trial+(1|Nest/BirdID),data=r1food)
+food.bowl
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1food
+#  events, n = 119, 144
+#  Iterations= 11 62 
+#                    NULL Integrated   Fitted
+#Log-likelihood -517.0539   -486.648 -435.628
+#
+#                   Chisq    df          p   AIC    BIC
+#Integrated loglik  60.81  5.00 8.2591e-12 50.81  36.92
+# Penalized loglik 162.85 42.06 4.4409e-16 78.74 -38.14
+#
+#Model:  Surv(TimeBowl, StatusBowl) ~ Treatment + Sex + Trial + (1 | #Nest/BirdID) 
+#Fixed coefficients
+#                 coef exp(coef)  se(coef)     z       p
+#Treatment1 -0.2502027 0.7786430 0.3224291 -0.78 4.4e-01
+#SexM       -0.5764486 0.5618903 0.2856347 -2.02 4.4e-02
+#Trial2      1.8384264 6.2866377 0.2326822  7.90 2.8e-15
+#
+#Random effects
+# Group       Variable    Std Dev   Variance 
+# Nest/BirdID (Intercept) 0.8503841 0.7231531
+# Nest        (Intercept) 0.3714580 0.1379810
+
+##startle test, approaching the bowl
+startle.bowl=coxme(Surv(TimeBowl)~Treatment+Sex+Sex:Treatment+(1|Nest/BirdID),data=r1startle)
+startle.bowl
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1startle
+#  events, n = 75, 75
+#  Iterations= 7 38 
+#                    NULL Integrated    Fitted
+#Log-likelihood -251.8904  -248.8493 -242.5562
+#
+#                  Chisq   df        p   AIC    BIC
+#Integrated loglik  6.08 5.00 0.298300 -3.92 -15.51
+# Penalized loglik 18.67 8.18 0.018455  2.31 -16.64
+#
+#Model:  Surv(TimeBowl) ~ Treatment + Sex + Sex:Treatment + (1 | Nest/BirdID) 
+#Fixed coefficients
+#                      coef exp(coef)  se(coef)     z     p
+#Treatment1      -0.8679673 0.4198040 0.4141794 -2.10 0.036
+#SexM            -0.2755733 0.7591368 0.3487672 -0.79 0.430
+#Treatment1:SexM  0.7455255 2.1075487 0.5218781  1.43 0.150
+#
+#Random effects
+# Group       Variable    Std Dev      Variance    
+# Nest/BirdID (Intercept) 0.0199869078 0.0003994765
+# Nest        (Intercept) 0.3515140139 0.1235621019
+
+
+##object neophobia, feeding
+object.feed=coxme(Surv(TimeFeed,StatusFeed)~Treatment+Trial+Sex+Sex:Treatment+(1|Nest/BirdID),data=r1object)
+object.feed
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1object
+#  events, n = 75, 140
+#  Iterations= 27 142 
+#                    NULL Integrated    Fitted
+#Log-likelihood -345.8624  -324.6443 -262.7119
+#
+#                   Chisq    df          p   AIC    BIC
+#Integrated loglik  42.44  6.00 1.5079e-07 30.44  16.53
+# Penalized loglik 166.30 47.85 5.3291e-15 70.60 -40.30
+#
+#Model:  Surv(TimeFeed, StatusFeed) ~ Treatment + Trial + Sex + #Sex:Treatment +      (1 | Nest/BirdID) 
+#Fixed coefficients
+#                      coef exp(coef)  se(coef)     z       p
+#Treatment1      -1.2455057 0.2877953 0.7413958 -1.68 9.3e-02
+#Trial4           1.3301105 3.7814613 0.2891378  4.60 4.2e-06
+#SexM            -0.4352750 0.6470867 0.5451334 -0.80 4.2e-01
+#Treatment1:SexM  0.7344636 2.0843636 0.8153951  0.90 3.7e-01
+#
+#Random effects
+# Group       Variable    Std Dev  Variance
+# Nest/BirdID (Intercept) 1.194549 1.426948
+# Nest        (Intercept) 1.048886 1.100161
+
+#no interactions ######FINAL MODEL########
+object.feed=coxme(Surv(TimeFeed,StatusFeed)~Treatment+Trial+Sex+(1|Nest/BirdID),data=r1object)
+object.feed
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1object
+#  events, n = 75, 140
+#  Iterations= 24 103 
+#                    NULL Integrated    Fitted
+#Log-likelihood -345.8624  -325.1076 -262.4332
+#
+#                   Chisq    df          p   AIC    BIC
+#Integrated loglik  41.51  5.00 7.4017e-08 31.51  19.92
+# Penalized loglik 166.86 48.05 4.9960e-15 70.75 -40.61
+#
+#Model:  Surv(TimeFeed, StatusFeed) ~ Treatment + Trial + Sex + (1 | #Nest/BirdID) 
+#Fixed coefficients
+#                 coef exp(coef)  se(coef)     z       p
+#Treatment1 -0.8435974 0.4301603 0.5805642 -1.45 1.5e-01
+#Trial4      1.3176782 3.7347401 0.2875727  4.58 4.6e-06
+#SexM       -0.1079037 0.8977140 0.4101992 -0.26 7.9e-01
+#
+#Random effects
+# Group       Variable    Std Dev  Variance
+# Nest/BirdID (Intercept) 1.224935 1.500465
+# Nest        (Intercept) 1.012897 1.025961
+
+##food neophobia, feeding
+food.feed=coxme(Surv(TimeFeed,StatusFeed)~Treatment+Trial+Sex+Sex:Treatment+(1|Nest/BirdID),data=r1food)
+food.feed
+Cox mixed-effects model fit by maximum likelihood
+  Data: r1food
+  events, n = 65, 144
+  Iterations= 14 75 
+                    NULL Integrated    Fitted
+Log-likelihood -305.7664  -265.2453 -227.6903
+
+                   Chisq    df          p   AIC   BIC
+Integrated loglik  81.04  6.00 2.2204e-15 69.04 56.00
+ Penalized loglik 156.15 31.88 0.0000e+00 92.38 23.05
+
+Model:  Surv(TimeFeed, StatusFeed) ~ Treatment + Trial + Sex + Sex:Treatment +      (1 | Nest/BirdID) 
+Fixed coefficients
+                     coef  exp(coef)  se(coef)     z       p
+Treatment1      -1.321637  0.2666983 0.6144747 -2.15 3.1e-02
+Trial2           3.187127 24.2187374 0.3909550  8.15 3.3e-16
+SexM            -1.311067  0.2695324 0.4324888 -3.03 2.4e-03
+Treatment1:SexM  1.076219  2.9335670 0.6535996  1.65 1.0e-01
+
+Random effects
+ Group       Variable    Std Dev   Variance 
+ Nest/BirdID (Intercept) 0.6676858 0.4458043
+ Nest        (Intercept) 0.9863081 0.9728036
+
+
+##startle test, feeding
+startle.feed=coxme(Surv(TimeFeed)~Treatment+Sex+Sex:Treatment+(1|Nest/BirdID),data=r1startle)
+startle.feed
+#Cox mixed-effects model fit by maximum likelihood
+#  Data: r1startle
+#  events, n = 75, 75
+#  Iterations= 6 33 
+#                    NULL Integrated    Fitted
+#Log-likelihood -251.8904  -247.8489 -241.8131
+#
+#                  Chisq   df        p   AIC    BIC
+#Integrated loglik  8.08 5.00 0.151720 -1.92 -13.50
+# Penalized loglik 20.15 8.01 0.009849  4.13 -14.45
+#
+#Model:  Surv(TimeFeed) ~ Treatment + Sex + Sex:Treatment + (1 | Nest/BirdID) 
+#Fixed coefficients
+#                      coef exp(coef)  se(coef)     z    p
+#Treatment1      -0.9483792 0.3873684 0.4061572 -2.34 0.02
+#SexM            -0.1394620 0.8698261 0.3434169 -0.41 0.68
+#Treatment1:SexM  0.8218416 2.2746851 0.5151984  1.60 0.11
+#
+#Random effects
+# Group       Variable    Std Dev      Variance    
+# Nest/BirdID (Intercept) 0.0199765927 0.0003990643
+# Nest        (Intercept) 0.3438611322 0.1182404782
+
+##########
+##GRAPHS##
+##########
+fit.object.bowl<-survfit(Surv(TimeBowl,StatusBowl)~Treatment,data=r1object)
+ggsurvplot(fit.object.bowl,
+           data=r1object,
+           size=0.5, #change line size
+           palette = c("#0004FF","#FF0008"), #custom colour
+           conf.int = TRUE, #add confidence interval
+           #conf.int.style = "ribbon", #"ribbon or "step"
+           #conf.int.alpha = 0.3, #0 = transparent & 1 = not transparent
+           pval=FALSE, #add p-value
+           pval.coord=c(2700,0.9), #change position of p-value
+           legend.labs = c("Control","Food-restricted"), #change legend labels
+           legend.title = "Treatment",
+           xlab = "Time (seconds)", #change x-axis label
+           ylab = "Proportion yet to feed", #change y-axis label
+           break.time.by = 300,
+           ggtheme = theme_bw() #change ggplot theme
+)
+
+fit.object.feed<-survfit(Surv(TimeFeed,StatusFeed)~Treatment,data=r1object)
+ggsurvplot(fit.object.feed,
+           data=r1object,
+           size=0.5, #change line size
+           palette = c("#0004FF","#FF0008"), #custom colour
+           conf.int = TRUE, #add confidence interval
+           #conf.int.style = "ribbon", #"ribbon or "step"
+           #conf.int.alpha = 0.3, #0 = transparent & 1 = not transparent
+           pval=FALSE, #add p-value
+           pval.coord=c(2700,0.9), #change position of p-value
+           legend.labs = c("Control","Food-restricted"), #change legend labels
+           legend.title = "Treatment",
+           xlab = "Time (seconds)", #change x-axis label
+           ylab = "Proportion yet to feed", #change y-axis label
+           break.time.by = 300,
+           ggtheme = theme_bw() #change ggplot theme
+)
+
+
+fit.food.bowl<-survfit(Surv(TimeBowl,StatusBowl)~Treatment,data=r1food)
+ggsurvplot(fit.food.bowl,
+           data=r1food,
+           size=0.5, #change line size
+           palette = c("#0004FF","#FF0008"), #custom colour
+           conf.int = TRUE, #add confidence interval
+           #conf.int.style = "ribbon", #"ribbon or "step"
+           #conf.int.alpha = 0.3, #0 = transparent & 1 = not transparent
+           pval=FALSE, #add p-value
+           pval.coord=c(2700,0.9), #change position of p-value
+           legend.labs = c("Control","Food-restricted"), #change legend labels
+           legend.title = "Treatment",
+           xlab = "Time (seconds)", #change x-axis label
+           ylab = "Proportion yet to approach bowl", #change y-axis label
+           break.time.by = 300,
+           ggtheme = theme_bw() #change ggplot theme
+)
+
+fit.food.feed<-survfit(Surv(TimeFeed,StatusFeed)~Treatment,data=r1food)
+ggsurvplot(fit.food.feed,
+           data=r1food,
+           size=0.5, #change line size
+           palette = c("#0004FF","#FF0008"), #custom colour
+           conf.int = TRUE, #add confidence interval
+           #conf.int.style = "ribbon", #"ribbon or "step"
+           #conf.int.alpha = 0.3, #0 = transparent & 1 = not transparent
+           pval=FALSE, #add p-value
+           pval.coord=c(2700,0.9), #change position of p-value
+           legend.labs = c("Control","Food-restricted"), #change legend labels
+           legend.title = "Treatment",
+           xlab = "Time (seconds)", #change x-axis label
+           ylab = "Proportion yet to feed", #change y-axis label
+           break.time.by = 300,
+           ggtheme = theme_bw() #change ggplot theme
+)
+
+
+fit.startle.bowl<-survfit(Surv(TimeBowl)~Treatment,data=r1startle)
+ggsurvplot(fit.startle.bowl,
+           data=r1startle,
+           size=0.5, #change line size
+           palette = c("#0004FF","#FF0008"), #custom colour
+           conf.int = TRUE, #add confidence interval
+           #conf.int.style = "ribbon", #"ribbon or "step"
+           #conf.int.alpha = 0.3, #0 = transparent & 1 = not transparent
+           pval=FALSE, #add p-value
+           pval.coord=c(2700,0.9), #change position of p-value
+           legend.labs = c("Control","Food-restricted"), #change legend labels
+           legend.title = "Treatment",
+           xlab = "Time (seconds)", #change x-axis label
+           ylab = "Proportion yet to approach bowl", #change y-axis label
+           break.time.by = 300,
+           ggtheme = theme_bw() #change ggplot theme
+)
+
+fit.startle.feed<-survfit(Surv(TimeFeed)~Treatment,data=r1startle)
+ggsurvplot(fit.startle.feed,
+           data=r1startle,
+           size=0.5, #change line size
+           palette = c("#0004FF","#FF0008"), #custom colour
+           conf.int = TRUE, #add confidence interval
+           #conf.int.style = "ribbon", #"ribbon or "step"
+           #conf.int.alpha = 0.3, #0 = transparent & 1 = not transparent
+           pval=FALSE, #add p-value
+           pval.coord=c(2700,0.9), #change position of p-value
+           legend.labs = c("Control","Food-restricted"), #change legend labels
+           legend.title = "Treatment",
+           xlab = "Time (seconds)", #change x-axis label
+           ylab = "Proportion yet to feed", #change y-axis label
+           break.time.by = 60,
+           ggtheme = theme_bw() #change ggplot theme
+)
